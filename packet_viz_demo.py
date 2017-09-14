@@ -22,12 +22,14 @@ packet_fields = {
     'fragments': 0
 }
 fig = plt.figure()
-ax = fig.add_subplot(111)
-#line1, = plt.plot([1,2,3],[3,2,1])
+ax = fig.add_subplot(211)
+ax2 = fig.add_subplot(212)
+
 xar = []
 yar = []
+pattern1x = []
+pattern2x = []
 
-blah = 0
 
 #r1 = p.line([], [], color="firebrick", line_width=2)
 
@@ -47,19 +49,22 @@ def run(host, port):
         # while True:
         #     print(p.get_message())        
         portcomb = {}
-        blah = 0
+
         #blocking
         for message in p.listen():
             if isinstance(message['data'], bytes):
                 payload = msgpack.unpackb(message['data'], encoding='utf-8')
                 print(payload)
-                #if(payload['sport'] == None):
-                #     continue
-                blah += 1
-                xar.append(blah)
-                yar.append(int(payload['sport'] ))
-                ax.clear()
+
+                # plot real-time normal series
                 
+                xar.append(payload['timestamp'])
+                yar.append(int(payload['raw_size'] ))
+                ax.clear()
+                ax.plot(xar, yar, 'g-') 
+
+                ax2.text(5,6,'Hi')
+ 
                 if(payload['sport'] in portcomb):
                     if (payload['dport'] not in portcomb[payload['sport']]):
                         portcomb[payload['sport']].append(payload['dport'])
@@ -67,9 +72,9 @@ def run(host, port):
                 else:
                     portcomb[payload['sport']] = [payload['dport']]
           
-                ax.plot(xar, yar)  
+
+
                 plt.pause(0.05)            
-                #ani = animation.FuncAnimation(fig, animate, interval=100)
                 plt.show(block=False)
 
 
@@ -79,6 +84,5 @@ def run(host, port):
 
 if __name__ ==  "__main__":
     plt.ion()
-    blah =0
     cli.add_command(run)
     cli()
