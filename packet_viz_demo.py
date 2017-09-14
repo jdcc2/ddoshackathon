@@ -26,6 +26,7 @@ ax = fig.add_subplot(111)
 #line1, = plt.plot([1,2,3],[3,2,1])
 xar = []
 yar = []
+
 blah = 0
 
 #r1 = p.line([], [], color="firebrick", line_width=2)
@@ -44,7 +45,8 @@ def run(host, port):
     try:
         #non-blocking
         # while True:
-        #     print(p.get_message())
+        #     print(p.get_message())        
+        portcomb = {}
         blah = 0
         #blocking
         for message in p.listen():
@@ -57,6 +59,13 @@ def run(host, port):
                 xar.append(blah)
                 yar.append(int(payload['sport'] ))
                 ax.clear()
+                
+                if(payload['sport'] in portcomb):
+                    if (payload['dport'] not in portcomb[payload['sport']]):
+                        portcomb[payload['sport']].append(payload['dport'])
+                        
+                else:
+                    portcomb[payload['sport']] = [payload['dport']]
           
                 ax.plot(xar, yar)  
                 plt.pause(0.05)            
@@ -73,9 +82,3 @@ if __name__ ==  "__main__":
     blah =0
     cli.add_command(run)
     cli()
-
-
-
-
-
-
