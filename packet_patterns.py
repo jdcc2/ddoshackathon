@@ -186,8 +186,8 @@ def analyse(df):
         result["pattern_packet_count"] = pattern_packets
 
         #WARNING Can be wrong
-        result['raw_attack_size_megabytes'] = df_pattern['raw_size'].sum() /1000000
-        result["pattern_total_megabytes"] = df_pattern[df_pattern['fragments'] == 0]['ip_length'].sum() / 1000000
+        result['raw_attack_size_megabytes'] = (df_pattern['raw_size'].sum() /1000000).item()
+        result["pattern_total_megabytes"] = (df_pattern[df_pattern['fragments'] == 0]['ip_length'].sum() / 1000000).item()
 
         #####
         # Calculating the percentage of the current pattern compared to the raw input file
@@ -207,12 +207,12 @@ def analyse(df):
         # Calculating the number of source IPs involved in the attack
         ips_involved = df_pattern['ip_src'].unique()
         attack_label = attack_label + "\n"+ str(len(ips_involved)) + " source IPs"
-        result["src_ips"] = ips_involved
+        result["src_ips"] = ips_involved.tolist()
         
         #####
         # Calculating the number of source IPs involved in the attack
-        result["start_timestamp"] = df_pattern['timestamp'].min()
-        result["end_timestamp"] = df_pattern['timestamp'].max()
+        result["start_timestamp"] = df_pattern['timestamp'].min().item()
+        result["end_timestamp"] = df_pattern['timestamp'].max().item()
 
         ####
         # Calculating the distribution of TTL variation (variation -> number of IPs)
