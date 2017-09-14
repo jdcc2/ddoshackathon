@@ -57,7 +57,8 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
         'dport': 0,
         'tcp_flag': '',
         'http_data': '',
-        'fragments': 0
+        'fragments': 0,
+        'raw_size': 0
     }
 
     columns = [
@@ -72,6 +73,7 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
         'tcp_flag',
         'fragments',
         'http_data',
+        'raw_size'
         ]
     try:
         # non-blocking
@@ -88,7 +90,6 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
                 payload = {}
                 payload.update(packet_fields)
                 payload.update(p)
-                packet_fields.update(payload)
 
                 current_data.append((
                     payload['timestamp'], payload['ip_ttl'],
@@ -96,14 +97,14 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
                     payload['ip_src'], payload['ip_dst'],
                     payload['sport'], payload['dport'],
                     payload['tcp_flag'], payload['fragments'],
-                    payload['http_data']
+                    payload['http_data'], payload['raw_size']
                     ))
                 packet_counter += 1
-            if packet_counter >= packets or time.time() - start_interval >interval:
+            if packet_counter >= packets or time.time() - start_interval > interval:
                 # new set
                 analyse(pd.DataFrame(current_data, columns=columns), 'test')
                 packet_counter = 0
-                start_interval= time.time()
+                start_interval = time.time()
                 current_data = []
 
     except KeyboardInterrupt as e:
