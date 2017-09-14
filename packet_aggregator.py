@@ -84,6 +84,7 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
         start_interval = time.time()
         current_data = []
         packet_counter = 0
+        print("starting loop")
         for message in p.listen():
             if isinstance(message['data'], bytes):
                 p = msgpack.unpackb(message['data'], encoding='utf-8')
@@ -100,8 +101,11 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
                     payload['http_data'], payload['raw_size']
                     ))
                 packet_counter += 1
+                if packet_counter > 50:
+                    print(packet_counter)
             if packet_counter >= packets or time.time() - start_interval > interval:
                 # new set
+                print("calling analyze")
                 analyse(pd.DataFrame(current_data, columns=columns), 'test')
                 packet_counter = 0
                 start_interval = time.time()
