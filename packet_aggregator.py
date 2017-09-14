@@ -1,7 +1,7 @@
 import redis
 import msgpack
 import dpkt
-import multiprocessing
+import multiprocessing as mp
 import time
 import click
 import pandas as pd
@@ -44,6 +44,8 @@ def print_packets(host, port):
 @click.option('--host', default='localhost')
 @click.option('--port', default=6379)
 def aggregate(interval=300, time_limit=300, packets=5000, host='localhost', port=6379):
+    pool = mp.Pool()
+    worker_results = []
     r = redis.StrictRedis(host=host, port=port, db=0)
     p = r.pubsub()
     p.subscribe('packets')
@@ -113,13 +115,22 @@ def aggregate(interval=300, time_limit=300, packets=5000, host='localhost', port
                     reason = ''
                     if packet_counter == packets:
                         reason = 'packet limit of {} packets hit'.format(packets)
-                    elif payload['timestamp'] - start_timestamp == interval:
+                    elif payload['timestamp'] - start_timestamp >= interval:
                         reason = 'interval of {} seconds exceeded'.format(interval)
                     else:
                         reason = 'time limit of {} seconds reached'.format(time_limit)
-                    print("Calling analyze, {}".format(reason))
 
-                    analyse(pd.DataFrame(current_data, columns=columns), 'test')
+
+                    #p = mp.Process(target=analyse, args=(pd.DataFrame(current_data, columns=columns), 'test'))
+                    #p.start()
+                    print('Running job results')
+                    for w in worker_results:
+                        print(type(w))
+                        #print(w.ready())
+                        print(w)
+                    print("Starting analyze worker, {}".format(reason))
+                    worker_results.append(pool.apply(analyse_worker, [pd.DataFrame(current_data, columns=columns)]))
+
                     packet_counter = 0
                     start_window = time.time()
                     start_timestamp = p['timestamp']
@@ -127,9 +138,18 @@ def aggregate(interval=300, time_limit=300, packets=5000, host='localhost', port
 
     except KeyboardInterrupt as e:
         print("Keyboard interrupt")
+        pool.terminate()
         pass
 
-
+def analyse_worker(d):
+    try:
+        print('Worker started')
+        print(d[0:1]['timestamp'][0])
+        r = analyse(d, 'test')
+        print('Worker result')
+        print(r)
+    except KeyboardInterrupt as e:
+        print('Worker received keyboard interrupt')
 
 if __name__ ==  "__main__":
     cli.add_command(print_packets)
