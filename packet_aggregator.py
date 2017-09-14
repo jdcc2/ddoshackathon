@@ -16,7 +16,7 @@ def run():
 @click.command()
 @click.option('--host', default='localhost')
 @click.option('--port', default=6379)
-def print(host, port):
+def print_packets(host, port):
     r = redis.StrictRedis(host=host, port=port, db=0)
     p = r.pubsub()
     p.subscribe('packets')
