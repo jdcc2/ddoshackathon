@@ -3,21 +3,93 @@ import msgpack
 import redis
 import click
 import socket
-import pcap
+import pandas as pd
+import numpy as np
+
+#Extra Functions (for enrichment purpose)
+df_port_name = pd.read_csv('enrichments/port_name.txt',delimiter=",", names=['port_num','port_name'])
+df_ip_proto_name = pd.read_csv('enrichments/ip_proto_name.txt',delimiter=",", names=['proto_num','proto_name'])
+
 
 @click.group()
 def cli():
     pass
 
 @click.command()
-def stream_packets():
-    pc = pcap.pcap()
-    #pc.setfilter('udp dst port 53')
+def receive():
     r = redis.StrictRedis(host='localhost', port=6379, db=0)
     p = r.pubsub()
-    stream(pc)
+    p.subscribe('patterns')
+    try:
+        # non-blocking
+        # while True:
+        #     print(p.get_message())
 
-def analyse(df, name):
+        # blocking
+        for message in p.listen():
+            if isinstance(message['data'], bytes):
+                payload = msgpack.unpackb(message['data'], encoding='utf-8')
+                print(payload)
+    except KeyboardInterrupt as e:
+        print('Keyboard interrupt')
+
+def get_ip_proto_name(ip_proto_number):
+    try:
+        return df_ip_proto_name[df_ip_proto_name['proto_num']==ip_proto_number]['proto_name'].values[0]
+    except:
+        return str(ip_proto_number)
+
+def get_port_name(port_number):
+    try:
+        return df_port_name[df_port_name['port_num']==port_number]['port_name'].values[0]+" service port"
+    except:
+        return "port "+str(int(port_number))
+
+def get_tcp_flag_name(tcp_flags_str):
+    tcp_flags=""
+    try:
+        tcp_flags += ("FIN" if (tcp_flags_str.find('F') != -1) else next)
+    except:
+        next
+    try:
+        tcp_flags += ("SYN" if (tcp_flags_str.find('S')!= -1) else next)
+    except:
+        next
+
+    try:
+        tcp_flags += ("RST" if tcp_flags_str.find('R') != -1 else next)
+    except:
+        next
+
+    try:
+        tcp_flags += ("PUSH" if tcp_flags_str.find('P') != -1 else next)
+    except:
+        next
+
+    try:
+        tcp_flags += ("ACK" if tcp_flags_str.find('A') != -1 else next)
+    except:
+        next
+
+    try:
+        tcp_flags += ("URG" if tcp_flags_str.find('U') != -1 else next)
+    except:
+        next
+
+    try:
+        tcp_flags += ("ECE" if tcp_flags_str.find('E') != -1 else next)
+    except:
+        next
+
+    try:
+        tcp_flags += ("CWR" if tcp_flags_str.find('C') != -1 else next)
+    except:
+        next
+
+
+    return tcp_flags
+
+def analyse(df):
     """
     Analysis only top traffic stream
 
@@ -284,7 +356,6 @@ def analyse(df, name):
     return result
    
 if __name__ == "__main__":
-    cli.add_command(stream_packets)
-    cli.add_command(stream_pcap)
+    cli.add_command(receive)
     cli()
 

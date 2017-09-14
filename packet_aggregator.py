@@ -6,7 +6,7 @@ import time
 import click
 import pandas as pd
 
-from ddos_labeling_jh import analyse
+from packet_patterns import analyse
 
 @click.group()
 def cli():
@@ -129,7 +129,7 @@ def aggregate(interval=300, time_limit=300, packets=5000, host='localhost', port
                         #print(w.ready())
                         print(w)
                     print("Starting analyze worker, {}".format(reason))
-                    worker_results.append(pool.apply(analyse_worker, [pd.DataFrame(current_data, columns=columns)]))
+                    worker_results.append(pool.apply(analyse_worker, [pd.DataFrame(current_data, columns=columns), host, port]))
 
                     packet_counter = 0
                     start_window = time.time()
@@ -141,13 +141,16 @@ def aggregate(interval=300, time_limit=300, packets=5000, host='localhost', port
         pool.terminate()
         pass
 
-def analyse_worker(d):
+def analyse_worker(d, host, port):
     try:
+        r = redis.StrictRedis(host=host, port=port, db=0)
+        p = r.pubsub()
         print('Worker started')
         print(d[0:1]['timestamp'][0])
-        r = analyse(d, 'test')
+        res = analyse(d)
         print('Worker result')
         print(r)
+        r.publish('patterns', msgpack.packb(res, use_bin_type=False))
     except KeyboardInterrupt as e:
         print('Worker received keyboard interrupt')
 
