@@ -113,7 +113,7 @@ def aggregate(interval=300, time_limit=300, packets=5000, host='localhost', port
                     reason = ''
                     if packet_counter == packets:
                         reason = 'packet limit of {} packets hit'.format(packets)
-                    elif payload['timestamp'] - start_timestamp == interval:
+                    elif payload['timestamp'] - start_timestamp >= interval:
                         reason = 'interval of {} seconds exceeded'.format(interval)
                     else:
                         reason = 'time limit of {} seconds reached'.format(time_limit)
