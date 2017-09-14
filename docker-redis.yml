@@ -1,0 +1,13 @@
+-   hosts: localhost
+    become: yes
+    become_user: root
+    vars:
+        app_dir: ./redis
+    tasks:
+        - name: Run docker
+          docker_container:
+            name: ddosredis
+            image: redis
+            state: started
+            published_ports:
+              - 127.0.0.1:6379:6379

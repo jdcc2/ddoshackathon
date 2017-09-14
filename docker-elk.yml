@@ -1,0 +1,18 @@
+-   hosts: localhost
+    become: yes
+    become_user: root
+    vars:
+        app_dir: ./elk
+        user: jd
+    tasks:
+        -   name: Get the ELK docker files
+            git: repo=https://meeseeks.student.utwente.nl/gogs/dodo/elk-docker.git dest={{ app_dir }}
+        -   name: Set ownership and permission on ELK dir
+            file: path={{ app_dir}} owner={{user}} group={{user}} mode=0770
+#        -   name: Create/Start ELK stack on docker
+#            docker_service:
+#                project_src: "{{ app_dir}}"
+#                project_name: elk
+#                state: present
+#                restarted: yes
+#                build: yes
