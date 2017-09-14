@@ -32,6 +32,7 @@ def stream(pc):
                 data['ip_length'] = ip.len
                 data['ip_src'] = socket.inet_ntoa(ip.src)  # 5
                 data['ip_dst'] = socket.inet_ntoa(ip.dst)
+                data['raw_size'] = len(pkt)
 
                 if (ip.p == 6 or ip.p == 17):  # Only add data for TCP or UDP
                     proto = ip.data
