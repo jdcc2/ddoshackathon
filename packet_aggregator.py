@@ -47,6 +47,19 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
     p = r.pubsub()
     p.subscribe('packets')
 
+    packet_fields = {
+        'timestamp': 0,  # date
+        'ip_src': '',
+        'ip_dst': '',
+        'ip_proto': 0,
+        'ip_length': 0,
+        'sport': 0,
+        'dport': 0,
+        'tcp_flag': '',
+        'http_data': '',
+        'fragments': 0
+    }
+
     columns = [
         'timestamp',
         'ip_ttl',
@@ -72,6 +85,7 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
         for message in p.listen():
             if isinstance(message['data'], bytes):
                 payload = msgpack.unpackb(message['data'], encoding='utf-8')
+                payload = packet_fields.merge(payload)
                 current_data.append((
                     payload['timestamp'], payload['ip_ttl'],
                     payload['ip_proto'], payload['ip_length'],
