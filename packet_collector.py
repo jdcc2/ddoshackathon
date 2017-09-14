@@ -9,20 +9,24 @@ import pcap
 def cli():
     pass
 
-@click.command()
-def stream_packets():
-    pc = pcap.pcap()
-    #pc.setfilter('udp dst port 53')
+def stream(pc):
+    """
+    pc should iterate over packets
+
+    :param pc:
+    :return:
+    """
+
     r = redis.StrictRedis(host='localhost', port=6379, db=0)
     p = r.pubsub()
-
 
     try:
         for ts, pkt in pc:
             eth = dpkt.ethernet.Ethernet(pkt)
             data = {}
             ip = eth.data
-            if eth.type == 2048: #only process IPv4
+            if eth.type == 2048:  # only process IPv4
+                data['timestamp'] = ts
                 data['ip_ttl'] = ip.ttl
                 data['ip_proto'] = ip.p
                 data['ip_length'] = ip.len
@@ -45,7 +49,7 @@ def stream_packets():
                             tcp_flag += ("E" if (int(proto.flags & dpkt.tcp.TH_ECE) != 0) else ".")  # 21
                             tcp_flag += ("C" if (int(proto.flags & dpkt.tcp.TH_CWR) != 0) else ".")  # 20
                         except:
-                           pass
+                            pass
                         data['tcp_flag'] = tcp_flag
                         if (proto.dport == 80) or (proto.dport == 443):
                             http_request_method = ''
@@ -83,7 +87,26 @@ def stream_packets():
         pass
 
 
+@click.command()
+@click.argument('filename')
+def stream_pcap(filename):
+    with open(filename, 'r') as f:
+        #inputfile = open(filename , 'r')
+        pc = dpkt.pcap.Reader(f)
+
+        stream(pc)
+
+@click.command()
+def stream_packets():
+    pc = pcap.pcap()
+    #pc.setfilter('udp dst port 53')
+    r = redis.StrictRedis(host='localhost', port=6379, db=0)
+    p = r.pubsub()
+    stream(pc)
+
+
 if __name__ == "__main__":
     cli.add_command(stream_packets)
+    cli.add_command(stream_pcap)
     cli()
 
