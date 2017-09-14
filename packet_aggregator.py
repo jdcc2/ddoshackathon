@@ -85,7 +85,7 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
         for message in p.listen():
             if isinstance(message['data'], bytes):
                 payload = msgpack.unpackb(message['data'], encoding='utf-8')
-                payload = packet_fields.merge(payload)
+                payload = packet_fields.update(payload)
                 current_data.append((
                     payload['timestamp'], payload['ip_ttl'],
                     payload['ip_proto'], payload['ip_length'],
