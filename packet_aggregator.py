@@ -58,6 +58,9 @@ def aggregate(interval=300):
         pass
 
 if __name__ ==  "__main__":
+    cli.add_command(print)
+    cli.add_command(run)
+    cli()
 
 
 
