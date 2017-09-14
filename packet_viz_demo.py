@@ -1,10 +1,13 @@
 import redis
 import msgpack
-import dpkt
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import random
+import pandas as pd
+import numpy as np
 from datetime import datetime
 import click
-from elasticsearch import Elasticsearch
-from elasticsearch.exceptions import ConflictError
+import random
 
 packet_fields = {
     'timestamp' : 0, #date
@@ -18,6 +21,14 @@ packet_fields = {
     'http_data': '',
     'fragments': 0
 }
+fig = plt.figure()
+ax = fig.add_subplot(111)
+#line1, = plt.plot([1,2,3],[3,2,1])
+xar = []
+yar = []
+blah = 0
+
+#r1 = p.line([], [], color="firebrick", line_width=2)
 
 @click.group()
 def cli():
@@ -27,56 +38,43 @@ def cli():
 @click.option('--port', default=6379)
 @click.command()
 def run(host, port):
-    r = redis.StrictRedis(host='localhost', port=6379, db=0)
+    r = redis.StrictRedis(host=host, port=6379, db=0)
     p = r.pubsub()
     p.subscribe('packets')
     try:
         #non-blocking
         # while True:
         #     print(p.get_message())
-
+        blah = 0
         #blocking
         for message in p.listen():
             if isinstance(message['data'], bytes):
                 payload = msgpack.unpackb(message['data'], encoding='utf-8')
                 print(payload)
+                #if(payload['sport'] == None):
+                #     continue
+                blah += 1
+                xar.append(blah)
+                yar.append(int(payload['sport'] ))
+                ax.clear()
+          
+                ax.plot(xar, yar)  
+                plt.pause(0.05)            
+                #ani = animation.FuncAnimation(fig, animate, interval=100)
+                plt.show(block=False)
+
+
     except KeyboardInterrupt as e:
         print("Keyboard interrupt")
         pass
 
 if __name__ ==  "__main__":
+    plt.ion()
+    blah =0
     cli.add_command(run)
     cli()
 
-    # res = es.index(index="packets", doc_type='packets', id=1, body=doc)
-    # print(res['created']
-    #
-    # res = es.get(index="test-index", doc_type='tweet', id=1)
-    # print(res['_source'])
-    #
-    # es.indices.refresh(index="test-index")
-    #
-    # res = es.search(index="test-index", body={"query": {"match_all": {}}})
-    # print("Got %d Hits:" % res['hits']['total'])
-    # for hit in res['hits']['hits']:
-    #     print("%(timestamp)s %(author)s: %(text)s" % hit["_source"])
-    #
-    # r = redis.StrictRedis(host='localhost', port=6379, db=0)
-    # p = r.pubsub()
-    # p.subscribe('packets')
-    # try:
-    #     #non-blocking
-    #     # while True:
-    #     #     print(p.get_message())
-    #
-    #     #blocking
-    #     for message in p.listen():
-    #         if isinstance(message['data'], bytes):
-    #             payload = msgpack.unpackb(message['data'])
-    #             print(payload)
-    # except KeyboardInterrupt as e:
-    #     print("Keyboard interrupt")
-    #     pass
+
 
 
 
