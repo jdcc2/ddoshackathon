@@ -10,4 +10,4 @@
             image: redis
             state: started
             published_ports:
-              - 127.0.0.1:6379:6379
+              - 0.0.0.0:6379:6379

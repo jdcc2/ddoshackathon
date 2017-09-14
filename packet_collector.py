@@ -78,7 +78,7 @@ def stream(pc):
                 # elif proto == 17:
                 #     proto = 'udp'
 
-                r.publish('packets', msgpack.packb(data))
+                r.publish('packets', msgpack.packb(data, use_bin_type=False))
             else:
                 continue
 
