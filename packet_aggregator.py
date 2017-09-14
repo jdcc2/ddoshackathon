@@ -39,7 +39,7 @@ def print_packets(host, port):
         pass
 @click.command()
 @click.option('--interval', default=300)
-@click.option('--packets', default=5000)
+@click.option('--packets', default=-1, help='the maximum number of packets to aggregate before starting analysis, set to -1 to ignore packet limit, defaults to -1')
 @click.option('--host', default='localhost')
 @click.option('--port', default=6379)
 def aggregate(interval=300, packets=5000, host='localhost', port=6379):
@@ -101,11 +101,15 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
                     payload['http_data'], payload['raw_size']
                     ))
                 packet_counter += 1
-                if packet_counter > 50:
-                    print(packet_counter)
-            if packet_counter >= packets or time.time() - start_interval > interval:
+            if (packets != -1 and packet_counter >= packets) or time.time() - start_interval > interval:
                 # new set
-                print("calling analyze")
+                reason = ''
+                if packet_counter == packets:
+                    reason = 'packet limit of {} packets hit'.format(packets)
+                else:
+                    reason = 'time limit of {} seconds reached'
+                print("Calling analyze, {}".format(reason))
+
                 analyse(pd.DataFrame(current_data, columns=columns), 'test')
                 packet_counter = 0
                 start_interval = time.time()
