@@ -84,15 +84,19 @@ def aggregate(interval=300, packets=5000, host='localhost', port=6379):
         packet_counter = 0
         for message in p.listen():
             if isinstance(message['data'], bytes):
-                payload = msgpack.unpackb(message['data'], encoding='utf-8')
-                payload = packet_fields.update(payload)
+                p = msgpack.unpackb(message['data'], encoding='utf-8')
+                payload = {}
+                payload.update(packet_fields)
+                payload.update(p)
+                packet_fields.update(payload)
+
                 current_data.append((
                     payload['timestamp'], payload['ip_ttl'],
                     payload['ip_proto'], payload['ip_length'],
                     payload['ip_src'], payload['ip_dst'],
                     payload['sport'], payload['dport'],
                     payload['tcp_flag'], payload['fragments'],
-                    payload['http_data'],
+                    payload['http_data']
                     ))
                 packet_counter += 1
             if packet_counter >= packets or time.time() - start_interval >interval:
