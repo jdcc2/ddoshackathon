@@ -1,13 +1,6 @@
-
-# coding: utf-8
-
-# ### For python script (instead of ipython)
-
-# In[1]:
-
 import sys
-import pandas as pd #more info at http://pandas.pydata.org/
-import numpy as np #more info at http://www.numpy.org/
+import pandas as pd 
+import numpy as np 
 import dpkt
 import socket
 import time
@@ -26,6 +19,7 @@ def cli():
 @click.option('--min_traffic_perc', default=90)
 @click.option('--min_traffic_mb', default=1000)
 @click.argument('input', nargs=-1)
+
 def search(input, max_ttl_perc, min_source_ips, min_traffic_perc, min_traffic_mb):
     filtered = 0
     no_data = 0
@@ -130,12 +124,10 @@ def read_pcap_df(filename):
 
 
             data.append((ip_ttl, ip_proto, ip_length, ip_src, ip_dst, sport, dport, tcp_flag, fragments, http_request_method, len(buf)))
-            # print >> outputfile, str(ip_ttl) + ';' + str(ip_proto) + ';' + str(ip_length) + ';' + str(
-            #     ip_src) + ';' + str(ip_dst) + ';' + str(sport) + ';' + str(dport) + ';' + str(tcp_flag) + ';' + str(
-            #     fragments) + ';' + str(http_request_method)
+
 
     columns = [
-        #     'timestamp',\
+        'timestamp',
         'ip_ttl',
         'ip_proto',
         'ip_length',
@@ -149,28 +141,8 @@ def read_pcap_df(filename):
         'raw_size']
     return pd.DataFrame(data, columns=columns)
 
-# ### For Jupyter Notebook (instead of python script)
-
-# In[2]:
-
-# input_file='../TITAN/TITAN-ESSYN-S-01_2014-12-22_22_33_09.pcap'
-# threshold=100
-# debug=False
-
-# import warnings
-# warnings.filterwarnings('ignore')
-
-
-# <h2 align='center'>==========================================================<br>
-# Functions to enrich the analysis (e.g., convert a protocol or port number in name) </h2>
-
-# In[3]:
-
-# %run 'enrichments/enrichments.ipynb'
-
-####
-#Libraries for data analysis
-
+######
+#Extra Functions (for enrichment purpose)
 df_port_name = pd.read_csv('enrichments/port_name.txt',delimiter=",", names=['port_num','port_name'])
 df_ip_proto_name = pd.read_csv('enrichments/ip_proto_name.txt',delimiter=",", names=['proto_num','proto_name'])
 
@@ -237,29 +209,33 @@ def analyse(df, name):
     :param df:
     :return:
     """
-    debug = False
+    debug = True
+    attack_case = "-1"
+    ttl_variation_threshold = 4
+
+
+
     result = {
-        "attack_name" : name,
-        "traffic_share": None,
-        "total_nr_packets": None,
-        "total_nr_attack_packets": None,
-        "attack_size_megabytes": None,
-        "raw_attack_size_megabytes": None,
-        "transport_protocol": None,
-        "selected_port": None,
-        "nr_src_ips": None,
-        "fragmented": False,
-        "ttl_variation": None,
-        "label": None,
-        "top_src_ports": None,
-        "top_dst_ports": None,
-        "target_ip": None
+        "reflected":False,
+        "spoofed":False,
+        "fragmented":False,
+        "pattern_traffic_share":0.0,
+        "pattern_packet_count":0,
+        "pattern_total_megabytes":0,
+        "start_timestamp":0,
+        "end_timestamp":0,
+        "dst_ports":[], #(port,share)
+        "src_ports":[], #(port,share)
+        "ttl_variation":[],
+        "src_ips":[],
+        "dst_ips":[],
+        "packets":[]
+    }    
 
-    }
-
+    if debug: print("\n\n\n")
     top_ip_dst = df['ip_dst'].value_counts().index[0]
     if debug: print("Top dst IP: "+ top_ip_dst)
-    result["target_ip"] = top_ip_dst
+    result["dst_ips"] = top_ip_dst
     top_ip_proto = df[df['ip_dst'] == top_ip_dst]['ip_proto'].value_counts().index[0]
     if debug: print("Top IP protocol: "+str(top_ip_proto))
 
@@ -271,23 +247,11 @@ def analyse(df, name):
         df['ip_proto'] == top_ip_proto)]
 
     ####
-    # Calculating the number of packets after the first filter
-    #Do not use
+    # Calculating the number of packets after the first filter 
     total_packets_filtered = len(df_filtered)
     if debug: print("Number of packets: "+str(total_packets_filtered))
     result["total_nr_packets"] = total_packets_filtered
 
-    # <h2 align='center'>====================================================================<br>
-    # Defining the attack trace to be classified and <br>calculate some statistics to be use in the classification</h2>
-
-    # In[8]:
-
-    attack_case = "-1"
-    ttl_variation_threshold = 4
-
-    #####
-    # ASSUMPTION: DDoS attack is a high concentration of packets with same characteristics (pattern)
-    # while (len(df_filtered)>0):
     ####
     # For attacks in the IP protocol level
     attack_label = get_ip_proto_name(top_ip_proto) + "-based attack"
@@ -297,7 +261,7 @@ def analyse(df, name):
     # For attacks based on TCP or UDP, which have source and destination ports
     if ((top_ip_proto == 6) or (top_ip_proto == 17)):
 
-        if debug: print("\n####################\nANALYSIS:\n####################")
+        if debug: print("\n####################\nREMAINING :\n####################")
         ####
         # Calculating the distribution of source ports based on the first filter
         percent_src_ports = df_filtered['sport'].value_counts().divide(float(total_packets_filtered) / 100)
@@ -332,17 +296,17 @@ def analyse(df, name):
         #####
         # Calculating the total number of packets involved in the attack
         pattern_packets = len(df_pattern)
-        result["total_nr_attack_packets"] = pattern_packets
+        result["pattern_packet_count"] = pattern_packets
 
         #WARNING Can be wrong
         result['raw_attack_size_megabytes'] = df_pattern['raw_size'].sum() /1000000
-        result["attack_size_megabytes"] = df_pattern[df_pattern['fragments'] == 0]['ip_length'].sum() / 1000000
+        result["pattern_total_megabytes"] = df_pattern[df_pattern['fragments'] == 0]['ip_length'].sum() / 1000000
 
         #####
         # Calculating the percentage of the current pattern compared to the raw input file
         representativeness = float(pattern_packets) * 100 / float(total_packets_filtered)
-        result["traffic_share"] = representativeness
-        attack_label = name + '; In %.2f' % representativeness + "% of packets targeting " + top_ip_dst + "; " + attack_label
+        result["pattern_traffic_share"] = representativeness
+        attack_label = 'In %.2f' % representativeness + "\n " + attack_label
 
         #####
         # Checking the existence of HTTP data
@@ -354,9 +318,14 @@ def analyse(df, name):
 
         #####
         # Calculating the number of source IPs involved in the attack
-        ips_involved = len(df_pattern['ip_src'].unique())
-        attack_label = attack_label + "; involving " + str(ips_involved) + " IP(s)"
-        result["nr_src_ips"] = ips_involved
+        ips_involved = df_pattern['ip_src'].unique()
+        attack_label = attack_label + "\n"+ str(len(ips_involved)) + " source IPs"
+        result["src_ips"] = ips_involved
+        
+        #####
+        # Calculating the number of source IPs involved in the attack
+        result["start_timestamp"] = df_pattern['timestamp'].min()
+        result["end_timestamp"] = df_pattern['timestamp'].max()
 
         ####
         # Calculating the distribution of TTL variation (variation -> number of IPs)
@@ -374,25 +343,25 @@ def analyse(df, name):
         percent_src_ports = df_pattern['sport'].value_counts().divide(float(pattern_packets) / 100)
         if debug: print("\nSource ports frequency")
         if debug: print(percent_src_ports.head())
-        result["top_src_ports"] = percent_src_ports[:3].to_dict()
+        result["src_ports"] = percent_src_ports.to_dict()
 
         ####
         # Calculating the distribution of destination ports after the first filter
         percent_dst_ports = df_pattern['dport'].value_counts().divide(float(pattern_packets) / 100)
         if debug: print("\nDestination ports frequency")
         if debug: print(percent_dst_ports.head())
-        result["top_dst_ports"] = percent_dst_ports[:3].to_dict()
+        result["dst_ports"] = percent_dst_ports.to_dict()
 
         ####
         # There are 3 possibilities of attacks cases!
         if (percent_src_ports.values[0] == 100):
             if (len(percent_dst_ports) == 1):
-                if debug: print("\nCASE 1: 1 source port to 1 destination port") if debug else next
+                # if debug: print("\nCASE 1: 1 source port to 1 destination port") if debug else next
                 attack_label = attack_label + "; using " + get_port_name(
                     percent_src_ports.keys()[0]) + "; to target " + get_port_name(
                     percent_dst_ports.keys()[0]) + "[" + '%.1f' % percent_dst_ports.values[0] + "%]"
             else:
-                if debug: print("\nCASE 2: 1 source port to a set of destination ports") if debug else next
+                # if debug: print("\nCASE 2: 1 source port to a set of destination ports") if debug else next
                 if (percent_dst_ports.values[0] >= 50):
                     attack_label = attack_label + "; using " + get_port_name(
                         percent_src_ports.keys()[0]) + "; to target a set of (" + str(
@@ -421,14 +390,14 @@ def analyse(df, name):
                         percent_dst_ports.keys()[2]) + "[" + '%.2f' % percent_dst_ports.values[2] + "%]"
         else:
             if (len(percent_src_ports) == 1):
-                if debug: print("\nCASE 1: 1 source port to 1 destination port") if debug else next
+                # if debug: print("\nCASE 1: 1 source port to 1 destination port") if debug else next
                 attack_label = attack_label + "; using " + get_port_name(percent_src_ports.keys()[0]) + "[" + '%.1f' % \
                                                                                                               percent_src_ports.values[
                                                                                                                   0] + "%]" + "; to target " + get_port_name(
                     percent_dst_ports.keys()[0]) + "[" + '%.1f' % percent_dst_ports.values[0] + "%]"
 
             else:
-                if debug: print("\nCASE 3: 1 source port to a set of destination ports") if debug else next
+                # if debug: print("\nCASE 3: 1 source port to a set of destination ports") if debug else next
                 if (percent_src_ports.values[0] >= 50):
                     attack_label = attack_label + "; using a set of (" + str(
                         len(percent_src_ports)) + ") ports, such as " + get_port_name(
@@ -478,121 +447,30 @@ def analyse(df, name):
             attack_label = attack_label + "; involving IP fragmentation"
             result["fragmented"] = True
 
-        # print(ttl_variations[::-1].values[0])
-        # print(ttl_variations[::-1].index[0])
         ####
         # IP spoofing (if (more than 0) src IPs had the variation of the ttl higher than a treshold)
         if (ttl_variations[::-1].values[0] > 0) and (ttl_variations[::-1].index[0] >= ttl_variation_threshold):
-
+            result["spoofed"]=True
             attack_label = attack_label + "; (likely involving) spoofed IPs"
         else:
             ####
             # Reflection and Amplification
             if percent_src_ports.values[0] >= 1:
+                result["reflected"]=True
                 attack_label = attack_label + "; Reflection & Amplification"
 
+        if debug: print("\n####################\nATTACK VECTOR LABEL:"+ "\n####################")
         if debug: print(attack_label)
+
         result["label"] = attack_label
-        # merged=df_filtered.merge(df_pattern, indicator=True, how='outer')
-        # df_filtered=merged[merged['_merge'] == 'left_only']
-        # df_filtered.drop('_merge', axis=1, inplace=True)
+        print(result)
 
-        # i=i+1
+
     return result
-    # In[9]:
-
-
-
-
-# <h2 align='center'>==========================================================<br>
-# Getting the size of the input (raw) file (in bytes)</h2>
-
-# In[4]:
-
-#Saving the file size in bytes!
-
-# raw_input_size=os.stat(input_file).st_size
-
-# if debug: print("File size: "+str(raw_input_size)+" Bytes")
-
-
-# <h2 align='center'>==========================================================<br>
-# Converting the input file (using dpkt and python 2.7)</h2>
-
-# In[5]:
-
-
-#time0 = time.time()
-
-# import argparse
-#
-# import os
-
-# if debug: print("Input: "+input_file)
-# if debug: print("Threshold[%]: "+str(threshold))
-
-####
-#Preparing output file (considering the input file a complet path or a symbolic path)
-# if input_file.startswith("../"):
-#     output_file=".."+input_file.split('.')[2]+".txt"
-# else:
-#     output_file=input_file.split('.')[0]+".txt"
-
-
-
-####
-#Saving the conversion time
-#conversion_time = time.time() - time0
-
-# if debug: print("Output: "+output_file)
-
-
-# <h2 align='center'>==========================================================<br>
-# Loading the converted input trace into</h2>
-
-# In[6]:
-
-#time0 = time.time()
-
-####
-#Loading the converted data into a csv
-#df = pd.read_csv(output_file,delimiter=";", names=columns,low_memory=False)
-
-#total_packets=len(df)
-####
-#Saving the loading time
-#loading_time=time.time() - time0
-
-
-# <h2 align='center'>====================================================================<br>
-# Determining the target and the IP protocol used in the attack</h2>
-
-# In[7]:
-
-
+   
 
 
 if __name__ == "__main__":
     cli.add_command(search)
     cli.add_command(show)
     cli()
-
-# In[10]:
-
-####
-#Just a message
-# os.system('say "Done!"')
-
-
-# In[11]:
-
-# print(  input_file,\
-#         threshold,
-#         attack_case,\
-#         raw_input_size,\
-#         conversion_time,\
-#         loading_time,\
-#         pre_analysis_time,\
-#         filtering_attack_time,\
-#         attack_classification_time,\
-#         attack_label) if debug else next
