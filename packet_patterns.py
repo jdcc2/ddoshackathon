@@ -5,6 +5,7 @@ import click
 import socket
 import pandas as pd
 import numpy as np
+import ujson as json
 
 #Extra Functions (for enrichment purpose)
 df_port_name = pd.read_csv('enrichments/port_name.txt',delimiter=",", names=['port_num','port_name'])
@@ -219,7 +220,8 @@ def analyse(df):
         ttl_variations = df_pattern.groupby(['ip_src'])['ip_ttl'].agg(np.ptp).value_counts().sort_index()
         if debug: print('TTL variation : NR of source IPs')
         if debug: print(ttl_variations)
-        result["ttl_variation"] = ttl_variations.to_dict()
+        #use to_json
+        result["ttl_variation"] = json.loads(ttl_variations.to_json())
 
         ####
         # Calculating the distribution of IP fragments (fragmented -> percentage of packets)
@@ -230,14 +232,16 @@ def analyse(df):
         percent_src_ports = df_pattern['sport'].value_counts().divide(float(pattern_packets) / 100)
         if debug: print("\nSource ports frequency")
         if debug: print(percent_src_ports.head())
-        result["src_ports"] = percent_src_ports.to_dict()
+        #use to_json()
+        result["src_ports"] = json.loads(percent_src_ports.to_json())
 
         ####
         # Calculating the distribution of destination ports after the first filter
         percent_dst_ports = df_pattern['dport'].value_counts().divide(float(pattern_packets) / 100)
         if debug: print("\nDestination ports frequency")
         if debug: print(percent_dst_ports.head())
-        result["dst_ports"] = percent_dst_ports.to_dict()
+        #use to_json
+        result["dst_ports"] = json.loads(percent_dst_ports.to_json())
 
         ####
         # There are 3 possibilities of attacks cases!
