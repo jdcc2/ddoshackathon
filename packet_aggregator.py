@@ -146,7 +146,7 @@ def analyse_worker(d, host, port):
         r = redis.StrictRedis(host=host, port=port, db=0)
         p = r.pubsub()
         print('Worker started')
-        print(d[0:1]['timestamp'][0])
+        #print(d[0:1]['timestamp'][0])
         res = analyse(d)
         print('Worker result')
         print(res)
