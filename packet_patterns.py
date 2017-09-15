@@ -1,4 +1,3 @@
-import dpkt
 import msgpack
 import redis
 import click

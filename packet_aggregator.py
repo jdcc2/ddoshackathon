@@ -1,6 +1,5 @@
 import redis
 import msgpack
-import dpkt
 import multiprocessing as mp
 import time
 import click
