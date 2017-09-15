@@ -2,8 +2,14 @@ import redis
 import msgpack
 from datetime import datetime
 import ujson as json
+import click
 
-if __name__ == "__main__":
+def cli():
+    pass
+
+@click.command()
+@click.argument('destination')
+def dump(destination):
     r = redis.StrictRedis(host='localhost', port=6379, db=0)
     p = r.pubsub()
     p.subscribe('patterns')
@@ -16,7 +22,18 @@ if __name__ == "__main__":
         for message in p.listen():
             if isinstance(message['data'], bytes):
                 payload = msgpack.unpackb(message['data'], encoding='utf-8')
-                with open('{}_pattern.json'.format(str(datetime.now().timestamp())), 'w') as f:
-                    json.dump(payload, f)
+                if (payload["transport_protocol"] == "UDP" or payload["transport_protocol"] == "TCP")\
+                    and payload["total_nr_packets"] > 1000:
+                    print("writing pattern to file")
+                    with open('{}/to_block.json'.format(destination, str(datetime.now().timestamp())), 'w') as f:
+                        json.dump(payload, f)
+                        f.truncate()
+
+
     except KeyboardInterrupt as e:
         print('Keyboard interrupt')
+
+
+if __name__ == "__main__":
+    cli.add_command(dump)
+    cli()
