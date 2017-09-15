@@ -5,7 +5,7 @@ import ujson as json
 import click
 import os
 
-
+@click.group()
 def cli():
     pass
 
@@ -27,11 +27,16 @@ def dump(destination):
                 if (payload["transport_protocol"] == "UDP" or payload["transport_protocol"] == "TCP")\
                     and payload["total_nr_packets"] > 1000:
                     print("writing pattern to file")
+                    print(payload['transport_protocol'])
+                    print(payload['total_nr_packets'])
                     p = os.path.abspath(destination)
-                    with open('{}/to_block.json'.format(p, str(datetime.now().timestamp())), 'w') as f:
+                    with open(p, 'w') as f:
                         json.dump(payload, f)
                         f.truncate()
-
+                else:
+                    print('pattern dropped')
+                    print(payload['transport_protocol'])
+                    print(payload['total_nr_packets'])
 
     except KeyboardInterrupt as e:
         print('Keyboard interrupt')
