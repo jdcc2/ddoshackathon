@@ -98,8 +98,9 @@ def stream_pcap(filename):
         stream(pc)
 
 @click.command()
-def stream_packets():
-    pc = pcap.pcap()
+@click.option('--interface', default='of-switch')
+def stream_packets(interface):
+    pc = pcap.pcap(name=interface)
     #pc.setfilter('udp dst port 53')
     r = redis.StrictRedis(host='localhost', port=6379, db=0)
     p = r.pubsub()
