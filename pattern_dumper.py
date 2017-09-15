@@ -16,7 +16,7 @@ if __name__ == "__main__":
         for message in p.listen():
             if isinstance(message['data'], bytes):
                 payload = msgpack.unpackb(message['data'], encoding='utf-8')
-                with open('{}_pattern.json'.format(str(datetime.now().timestamp())), 'rw') as f:
+                with open('{}_pattern.json'.format(str(datetime.now().timestamp())), 'w') as f:
                     json.dump(payload, f)
     except KeyboardInterrupt as e:
         print('Keyboard interrupt')
