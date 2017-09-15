@@ -36,6 +36,7 @@ def print_packets(host, port):
     except KeyboardInterrupt as e:
         print("Keyboard interrupt")
         pass
+
 @click.command()
 @click.option('--interval', default=300)
 @click.option('--time_limit', default=300)
