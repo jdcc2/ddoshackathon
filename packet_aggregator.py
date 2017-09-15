@@ -150,12 +150,6 @@ def analyse_worker(d, host, port):
         res = analyse(d)
         print('Worker result')
         print(res)
-        for k in res.keys():
-            print(k, type(res[k]))
-            if isinstance(res[k], dict):
-                for l in res[k].keys():
-                    print(l, type(res[k][l]))
-
         r.publish('patterns', msgpack.packb(res, use_bin_type=False))
     except KeyboardInterrupt as e:
         print('Worker received keyboard interrupt')
