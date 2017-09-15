@@ -3,6 +3,8 @@ import msgpack
 from datetime import datetime
 import ujson as json
 import click
+import os
+
 
 def cli():
     pass
@@ -25,7 +27,8 @@ def dump(destination):
                 if (payload["transport_protocol"] == "UDP" or payload["transport_protocol"] == "TCP")\
                     and payload["total_nr_packets"] > 1000:
                     print("writing pattern to file")
-                    with open('{}/to_block.json'.format(destination, str(datetime.now().timestamp())), 'w') as f:
+                    p = os.path.abspath(destination)
+                    with open('{}/to_block.json'.format(p, str(datetime.now().timestamp())), 'w') as f:
                         json.dump(payload, f)
                         f.truncate()
 
